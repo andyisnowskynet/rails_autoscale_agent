@@ -48,7 +48,7 @@ module RailsAutoscaleAgent
         # self.queues |= run_at_by_queue.keys
 
         # queues.each do |queue|
-          queue = @queues.first
+          queue = "default"
           next_job  = DB[:que_jobs].order(:run_at).first
 
           #run_at = run_at_by_queue[queue]
