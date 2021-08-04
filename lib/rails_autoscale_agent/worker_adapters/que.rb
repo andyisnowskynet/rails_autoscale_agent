@@ -48,17 +48,19 @@ module RailsAutoscaleAgent
         # self.queues |= run_at_by_queue.keys
 
         # queues.each do |queue|
-          queue = "default"
-          next_job  = DB[:que_jobs].order(:run_at).first
+        queue = "default"
 
-          #run_at = run_at_by_queue[queue]
-          run_at = next_job[:run_at]
-          run_at = DateTime.parse(run_at) if run_at.is_a?(String)
-          latency_ms = run_at ? ((t - run_at)*1000).ceil : 0
-          latency_ms = 0 if latency_ms < 0
+        currently_working_job_ids = Que.worker_states.collect { |x| x[:job_id] }
+        next_job = DB[:que_jobs].order(:run_at).exclude(job_id: currently_working_job_ids).first
 
-          store.push latency_ms, t, queue
-          log_msg << "que.#{queue}=#{latency_ms} "
+        # run_at = run_at_by_queue[queue]
+        run_at = next_job[:run_at]
+        run_at = DateTime.parse(run_at) if run_at.is_a?(String)
+        latency_ms = run_at ? ((t - run_at)*1000).ceil : 0
+        latency_ms = 0 if latency_ms < 0
+
+        store.push latency_ms, t, queue
+        log_msg << "que.#{queue}=#{latency_ms} "
         # end
 
         logger.debug log_msg unless log_msg.empty?
