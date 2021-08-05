@@ -28,50 +28,22 @@ module RailsAutoscaleAgent
       def collect!(store)
         log_msg = String.new
         t = Time.now.utc
-        # sql = <<~SQL
-        #   SELECT queue, min(run_at)
-        #   FROM que_jobs
-        #   WHERE finished_at IS NULL
-        #   AND expired_at IS NULL
-        #   AND error_count = 0
-        #   GROUP BY 1
-        # SQL
 
-        # run_at_by_queue = Hash[select_rows(sql)]
-
-        # # Don't collect worker metrics if there are unreasonable number of queues
-        # if run_at_by_queue.size > 50
-        #   logger.warn "Skipping Que metrics - #{run_at_by_queue.size} queues"
-        #   return
-        # end
-
-        # self.queues |= run_at_by_queue.keys
-
-        # queues.each do |queue|
         queue = "default"
 
-        currently_working_job_ids = Que.worker_states.collect { |x| x[:job_id] }
+        currently_working_job_ids = ::Que.worker_states.collect { |x| x[:job_id] }
         next_job = DB[:que_jobs].order(:run_at).exclude(job_id: currently_working_job_ids).first
 
-        # run_at = run_at_by_queue[queue]
-        run_at = next_job[:run_at]
+        run_at = next_job && next_job[:run_at]
         run_at = DateTime.parse(run_at) if run_at.is_a?(String)
         latency_ms = run_at ? ((t - run_at)*1000).ceil : 0
         latency_ms = 0 if latency_ms < 0
 
         store.push latency_ms, t, queue
         log_msg << "que.#{queue}=#{latency_ms} "
-        # end
 
         logger.debug log_msg unless log_msg.empty?
       end
-
-      # private
-
-      # def select_rows(sql)
-      #   # This ensures the agent doesn't hold onto a DB connection any longer than necessary
-      #   ActiveRecord::Base.connection_pool.with_connection { |c| c.select_rows(sql) }
-      # end
     end
   end
 end
