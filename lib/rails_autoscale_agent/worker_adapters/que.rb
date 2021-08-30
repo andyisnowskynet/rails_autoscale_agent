@@ -42,6 +42,12 @@ module RailsAutoscaleAgent
         store.push latency_ms, t, queue
         log_msg << "que.#{queue}=#{latency_ms} "
 
+        if track_long_running_jobs?
+          busy_count = currently_working_job_ids.length
+          store.push busy_count, Time.now, queue, :busy
+          log_msg << "que-busy.#{queue}=#{busy_count} "
+        end
+
         logger.debug log_msg unless log_msg.empty?
       end
     end
